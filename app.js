@@ -1,41 +1,44 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+global.window = {
+  navigator: {
+    userAgent: 'a'
+  }
+}
+const fs = require('fs')
+const { JSDOM } = require('jsdom')
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+const content = fs.readFileSync('./index.html', 'utf8');
 
-var app = express();
+global.document = new JSDOM(content).window.document;
 
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
 
-app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+const Vue = require('vue/dist/vue.js')
+const server = require('express')()
+const HelloWorld = require('./client/dist/js/chunk-71654c89.f4a4b58b.js');
+const SlotComponent = require('./client/dist/js/chunk-0d5eb1c6.644b291d.js');
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
+const renderer = require('vue-server-renderer').createRenderer()
 
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
-});
+server.get('*', (req, res) => {
+  Vue.component('hello-world', (h) => h(HelloWorld))
+  Vue.component('slot-component', (h) => h(SlotComponent))
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+  const app = new Vue({
+    el: '#app-container'
+  })
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
-});
+  renderer.renderToString(app, (err, html) => {
+    if (err) {
+      res.status(500).end('Internal Server Error')
+      return
+    }
+    res.end(`
+      <!DOCTYPE html>
+      <html lang="en">
+        <head><title>Hello</title></head>
+        <body>${html}</body>
+      </html>
+    `)
+  })
+})
 
-module.exports = app;
+server.listen(4001)
