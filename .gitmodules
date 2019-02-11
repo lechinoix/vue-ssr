@@ -1,0 +1,3 @@
+[submodule "cx20-front"]
+	path = cx20-front
+	url = git@github.com:the-ultimate-flooring-experience/cx20-front
