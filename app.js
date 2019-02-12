@@ -4,22 +4,11 @@ const { JSDOM } = require('jsdom')
 const Vue = require('vue/dist/vue.js')
 const server = require('express')()
 const renderer = require('vue-server-renderer').createRenderer()
+const { createElementFromHTML, insertAfter } = require('./utils')
 
 server.get('*', (req, res) => {
   const content = fs.readFileSync('./index.html', 'utf8');
   global.document = new JSDOM(content).window.document;
-
-  function createElementFromHTML(htmlString) {
-    var div = document.createElement('div');
-    div.innerHTML = htmlString.trim();
-
-    // Change this to div.childNodes to support multiple top-level nodes
-    return div.firstChild;
-  }
-
-  function insertAfter(newNode, referenceNode) {
-    referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
-  }
 
   const app = new Vue({
     el: '#app-container',
@@ -51,16 +40,19 @@ server.get('*', (req, res) => {
 
   renderer.renderToString(app, (err, html) => {
     if (err) {
+      console.error(err)
       res.status(500).end('Internal Server Error')
       return
     }
 
     const appEL = document.getElementById('app-container')
 
+    // Insert global __TEMPLATE__ variable to be used by front
     const scriptEl = document.createElement('script');
     const inlineScript = document.createTextNode(`window.__TEMPLATE__ = \`${appEL.outerHTML}\`;`);
     scriptEl.appendChild(inlineScript)
     insertAfter(scriptEl, appEL)
+    //
 
     appEL.parentElement.replaceChild(createElementFromHTML(html), appEL)
 
